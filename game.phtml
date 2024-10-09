@@ -1,0 +1,117 @@
+<link rel="stylesheet" href="assets/css/game.css">
+
+<?php
+$controller = new MainController('http://backend:5763/');
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['name'])) {
+    $game_name = $_GET['name'];
+    $user_login = $_POST['user_login'];
+    $user = $controller->get_user_by_login($user_login);
+    $game = $controller->get_game_by_name($game_name);
+
+    if (is_string($user)) {
+        echo "<p>User not found.</p>";
+    } elseif (is_string($game)) {
+        echo "<p>Game not found.</p>";
+    } elseif ($user['balance'] < $game['cost']) {
+        echo "<p>Insufficient funds to purchase the game.</p>";
+    } else {
+        // Attempt to buy the game
+        $result = $controller->buy_game($user_login, $game_name);
+
+        if (is_array($result) && isset($result['error'])) {
+            echo "<p>Error purchasing game: " . htmlspecialchars($result['error']) . "</p>";
+        } else {
+            echo "<p>Game purchased successfully! New balance: $" . htmlspecialchars($user['balance']) . "</p>";
+        }
+    }
+}
+
+if (isset($_GET['name'])) {
+    $game_name = $_GET['name'];
+    $game = $controller->get_game_by_name($game_name);
+    // print_r($game);
+
+
+    if (is_string($game)) {
+        echo "<p>$game</p>";
+    } else {
+        echo "<h2>Game Details: " . htmlspecialchars($game['name']) . "</h2>";
+        echo '<p><strong>Genre:</strong> ' . htmlspecialchars($game['genre']) . '</p>';
+        echo '<p><strong>Platform:</strong> ' . htmlspecialchars($game['platform']) . '</p>';
+        echo '<p><strong>Release Year:</strong> ' . htmlspecialchars($game['release_year']) . '</p>';
+        echo '<p><strong>Cost:</strong> $' . htmlspecialchars($game['cost']) . '</p>';
+
+        echo '<h3>Buy Game</h3>';
+        echo '<form method="POST" action="?page=game&name=' . urlencode($game_name) . '">
+                <label for="user_login">User Login:</label>
+                <input type="text" id="user_login" name="user_login" required><br>
+                <input type="hidden" id="game_name" name="game_name" value='. urlencode($game_name) .'required><br>
+                <button type="submit">Buy Game</button>
+              </form>';
+    }
+} else {
+    // Existing code for listing games and creating a new game
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_GET['name'])) {
+        $new_game = [
+            'name' => $_POST['name'],
+            'genre' => $_POST['genre'],
+            'platform' => $_POST['platform'],
+            'release_year' => $_POST['release_year'],
+            'cost' => $_POST['cost'],
+        ];
+        $result = $controller->create_game($new_game);
+    }
+
+    $games = $controller->get_games();
+
+    if (is_string($games)) {
+        echo "<p>$games</p>";
+    } else {
+        if (empty($games)) {
+            echo "<p>No games found.</p>";
+        } else {
+            echo '<table border="1">
+                    <tr>
+                        <th>Name</th>
+                        <th>Genre</th>
+                        <th>Platform</th>
+                        <th>Release Year</th>
+                        <th>Cost</th>
+                        <th>Details</th>
+                    </tr>';
+            foreach ($games as $game) {
+                echo '<tr>
+                        <td>' . htmlspecialchars($game['name']) . '</td>
+                        <td>' . htmlspecialchars($game['genre']) . '</td>
+                        <td>' . htmlspecialchars($game['platform']) . '</td>
+                        <td>' . htmlspecialchars($game['release_year']) . '</td>
+                        <td>$' . htmlspecialchars($game['cost']) . '</td>
+                        <td><a href="?page=game&name=' . urlencode($game['name']) . '">View Details</a></td>
+                    </tr>';
+            }
+            echo '</table>';
+        }
+    }
+
+    echo '<h2>Create a New Game</h2>
+    <form method="POST" action="?page=game">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" required><br>
+        
+        <label for="genre">Genre:</label>
+        <input type="text" id="genre" name="genre" required><br>
+        
+        <label for="platform">Platform:</label>
+        <input type="text" id="platform" name="platform" required><br>
+        
+        <label for="release_year">Release Year:</label>
+        <input type="date" id="release_year" name="release_year" required><br>
+        
+        <label for="cost">Cost:</label>
+        <input type="number" id="cost" name="cost" step="0.01" required><br>
+        
+        <button type="submit">Create Game</button>
+    </form>';
+}
+?>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PC Data</title>
+    <link rel="stylesheet" href="assets/css/index.css">
+</head>
+<body>
+    <h1>PC Data</h1>
+    <div class="system-info">
+        <?php
+        // Get RAM usage
+        function get_ram_usage() {
+            if (PHP_OS_FAMILY === 'Windows') {
+                $output = shell_exec('wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /Value');
+                $lines = explode("\n", $output);
+                $ram = [];
+                foreach ($lines as $line) {
+                    if (strpos($line, 'FreePhysicalMemory') !== false || strpos($line, 'TotalVisibleMemorySize') !== false) {
+                        list($key, $value) = explode("=", $line);
+                        $ram[trim($key)] = trim($value);
+                    }
+                }
+                $totalMemory = $ram['TotalVisibleMemorySize'] * 1024;
+                $freeMemory = $ram['FreePhysicalMemory'] * 1024;
+                $usedMemory = $totalMemory - $freeMemory;
+
+                return [
+                    'total' => format_size($totalMemory),
+                    'free' => format_size($freeMemory),
+                    'used' => format_size($usedMemory)
+                ];
+            } else {
+                $free = shell_exec('free');
+                if ($free !== null) {
+                    $free = (string)trim($free);
+                    $free_arr = explode("\n", $free);
+                    $mem = explode(" ", $free_arr[1]);
+                    $mem = array_filter($mem);
+                    $mem = array_merge($mem);
+                    $totalMemory = $mem[1] * 1024;
+                    $usedMemory = $mem[2] * 1024;
+                    $freeMemory = $mem[3] * 1024;
+
+                    return [
+                        'total' => format_size($totalMemory),
+                        'free' => format_size($freeMemory),
+                        'used' => format_size($usedMemory)
+                    ];
+                }
+                return null;
+            }
+        }
+
+        // Get storage usage
+        function get_storage_usage() {
+            $disk_total_space = disk_total_space("/");
+            $disk_free_space = disk_free_space("/");
+            $disk_used_space = $disk_total_space - $disk_free_space;
+
+            return [
+                'total' => format_size($disk_total_space),
+                'free' => format_size($disk_free_space),
+                'used' => format_size($disk_used_space)
+            ];
+        }
+
+        // Format size in human-readable form
+        function format_size($size) {
+            $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            for ($i = 0; $size >= 1024 && $i < count($units) - 1; $i++) {
+                $size /= 1024;
+            }
+            return round($size, 2) . ' ' . $units[$i];
+        }
+
+        $ram_usage = get_ram_usage();
+        $storage_usage = get_storage_usage();
+
+        if ($ram_usage) {
+            echo "<h2>RAM Usage</h2>";
+            echo "<p>Total RAM: " . $ram_usage['total'] . "</p>";
+            echo "<p>Used RAM: " . $ram_usage['used'] . "</p>";
+            echo "<p>Free RAM: " . $ram_usage['free'] . "</p>";
+        } else {
+            echo "<p>Unable to get RAM usage.</p>";
+        }
+
+        echo "<h2>Storage Usage</h2>";
+        echo "<p>Total Storage: " . $storage_usage['total'] . "</p>";
+        echo "<p>Used Storage: " . $storage_usage['used'] . "</p>";
+        echo "<p>Free Storage: " . $storage_usage['free'] . "</p>";
+        ?>
+    </div>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RGPD Information</title>
+    <link rel="stylesheet" href="assets/css/rgpd.css">
+</head>
+<body>
+
+<h1>General Data Protection Regulation (RGPD)</h1>
+
+<p>
+    The General Data Protection Regulation (GDPR) is a regulation in EU law on data protection and privacy. It applies to all individuals within the European Union and addresses the export of personal data outside the EU.
+</p>
+
+<p>
+    This regulation aims to enhance the protection of personal data and give control to individuals over their personal data. Under the GDPR, you have the right to access your data, request corrections, and delete your data among other rights.
+</p>
+
+<h2>Contact Us</h2>
+
+<p>If you have any questions or concerns regarding your data, please feel free to send us a message using the form below:</p>
+
+<?php
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['message'])) {
+    $message = $_POST['message'];
+    $controller = new MainController('http://backend:5763/');
+    $result = $controller->post_rgpd_message($message);
+
+    if (is_array($result) && isset($result['error'])) {
+        echo "<p>Message sent successfully! Thank you for your feedback.</p>";
+    } else {
+        echo "<p>Error sending message: " . htmlspecialchars($result['error']) . "</p>";
+    }
+}
+?>
+
+<form method="POST" action="?page=rgpd">
+    <label for="message">Your Message:</label><br>
+    <textarea id="message" name="message" rows="4" cols="50" required></textarea><br>
+    <button type="submit">Send Message</button>
+</form>
+
+</body>
+</html>

@@ -1,0 +1,126 @@
+<link rel="stylesheet" href="assets/css/game.css">
+<?php
+$controller = new MainController('http://backend:5763/');
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['login'])) {
+    $login = $_GET['login'];
+
+    // Handle adding money
+    if (isset($_POST['add_money'])) {
+        $money = $_POST['money'];
+        $result = $controller->add_money($login, $money);
+        echo "<p>".$result["message"]."</p>";
+    } elseif (isset($_POST['update_user'])) {
+        // Update user profile
+        if ($_POST['password'] !== $_POST['password_repeat']) {
+            echo "<p>Passwords do not match.</p>";
+        } else {
+            $user_data = [
+                'firstname' => $_POST['firstname'],
+                'lastname'  => $_POST['lastname'],
+                'email'     => $_POST['email'],
+                'password'  => $_POST['password'],
+            ];
+            $result = $controller->update_user($login, $user_data);
+            echo "<p>$result</p>";
+        }
+    }
+}
+
+if (isset($_GET['login'])) {
+    $login = $_GET['login'];
+    $user = $controller->get_user_by_login($login);
+
+    if (is_string($user)) {
+        echo "<p>$user</p>";
+    } else {
+        echo "<h2>User Profile: " . htmlspecialchars($user['firstname']) . " " . htmlspecialchars($user['lastname']) . "</h2>";
+        echo '<p><strong>Email:</strong> ' . htmlspecialchars($user['email']) . '</p>';
+        echo '<p><strong>Balance:</strong> $' . htmlspecialchars($user['balance']) . '</p>';
+        
+        // Display purchased games
+        echo '<h3>Purchased Games:</h3>';
+        if (is_array($user['purchased_games']) && !empty($user['purchased_games'])) {
+            echo '<ul>';
+            foreach ($user['purchased_games'] as $game) {
+                echo '<li>';
+                echo 'Name: ' . htmlspecialchars($game['name']) . '<br>';
+                echo 'Genre: ' . htmlspecialchars($game['genre']) . '<br>';
+                echo 'Platform: ' . htmlspecialchars($game['platform']) . '<br>';
+                echo '</li><br>';
+            }
+            echo '</ul>';
+        } else {
+            echo '<p>No games purchased.</p>';
+        }
+
+        echo "<h3>Add Money to Account</h3>";
+        echo '<form method="POST" action="?page=user&login=' . htmlspecialchars($login) . '">
+                <label for="money">Amount:</label>
+                <input type="number" id="money" name="money" min="1" required><br>
+                <button type="submit" name="add_money">Add Money</button>
+              </form>';
+
+        echo "<h3>Edit User Profile</h3>";
+        echo '<form method="POST" action="?page=user&login=' . htmlspecialchars($login) . '">
+                <label for="firstname">Firstname:</label>
+                <input type="text" id="firstname" name="firstname" value="' . htmlspecialchars($user['firstname']) . '" required><br>
+                
+                <label for="lastname">Lastname:</label>
+                <input type="text" id="lastname" name="lastname" value="' . htmlspecialchars($user['lastname']) . '" required><br>
+                
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" value="' . htmlspecialchars($user['email']) . '" required><br>
+                
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required><br>
+                
+                <label for="password_repeat">Password repeat:</label>
+                <input type="password" id="password_repeat" name="password_repeat" required><br>
+                
+                <button type="submit" name="update_user">Update User</button>
+              </form>';
+    }
+} else {
+    // Existing code for listing users and creating a new user
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $new_user = [
+            'firstname' => $_POST['firstname'],
+            'lastname'  => $_POST['lastname'],
+            'email'     => $_POST['email'],
+            'password'  => $_POST['password'],
+            'password_repeat' => $_POST['password_repeat'],
+        ];
+        $result = $controller->create_user($new_user);
+    }
+
+    $users = $controller->get_users();
+
+    if (is_string($users)) {
+        echo "<p>$users</p>";
+    } else {
+        if (empty($users)) {
+            echo "<p>No users found.</p>";
+        } else {
+            echo '<table border="1">
+                    <tr>
+                        <th>Firstname</th>
+                        <th>Lastname</th>
+                        <th>Email</th>
+                        <th>Login</th>
+                        <th>Profile</th>
+                    </tr>';
+            foreach ($users as $user) {
+                echo '<tr>
+                        <td>' . htmlspecialchars($user['firstname']) . '</td>
+                        <td>' . htmlspecialchars($user['lastname']) . '</td>
+                        <td>' . htmlspecialchars($user['email']) . '</td>
+                        <td>' . htmlspecialchars($user['login']) . '</td>
+                        <td><a href="?page=user&login=' . urlencode($user['login']) . '">View Profile</a></td>
+                    </tr>';
+            }
+            echo '</table>';
+        }
+    }
+}
+?>
